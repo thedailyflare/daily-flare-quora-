@@ -134,9 +134,9 @@ class MainActivity : Activity() {
   val meta=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
   meta.addView(tv("STORY "+number.toString().padStart(2,'0'),10f,gold,true).apply{letterSpacing=.1f},LinearLayout.LayoutParams(0,dp(22),1f))
   val done=posted.getBoolean(story.link,false);if(done)meta.addView(tv("POSTED ✓",10f,green,true).apply{background=shape(Color.rgb(228,239,232),12);setPadding(dp(9),dp(5),dp(9),dp(5))});card.addView(meta)
-  card.addView(tv(story.title,19f,ink,true).apply{setPadding(0,dp(6),0,dp(9));maxLines=4})
+  card.addView(tv(story.title,19f,ink,true).apply{setPadding(0,dp(6),0,dp(14));maxLines=3})
+  // Keep the excerpt hidden for a compact card, but preserve it for every sharing action.
   val ex=(if(story.excerpt.isBlank())"Read the latest report and discover the full details behind this story." else story.excerpt).take(460)
-  card.addView(tv(ex,14f,muted).apply{setLineSpacing(dp(2).toFloat(),1f);setPadding(0,0,0,dp(16));maxLines=5})
   val quoraPost=ex+"\n\n"+story.link
   val socialRow=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
   fun socialIcon(label:String,bg:Int,fg:Int=Color.WHITE,action:()->Unit):TextView=tv(label,15f,fg,true).apply{
