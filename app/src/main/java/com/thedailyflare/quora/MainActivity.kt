@@ -30,8 +30,22 @@ class MainActivity : Activity() {
  private lateinit var searchBox:EditText
  private var allStories:List<Story> = emptyList()
  private var copiedStoryLink:String? = null
+ private var refreshPostedOnResume=false
+ private val copiedKey="copied_story_link"
 
- override fun onCreate(b:Bundle?){super.onCreate(b); render(); loadFeed()}
+ override fun onCreate(b:Bundle?){
+  super.onCreate(b)
+  copiedStoryLink=posted.getString(copiedKey,null)
+  render()
+  loadFeed()
+ }
+ override fun onResume(){
+  super.onResume()
+  if(refreshPostedOnResume){
+   refreshPostedOnResume=false
+   filterStories(searchBox.text?.toString().orEmpty())
+  }
+ }
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
  private fun shape(c:Int,r:Int=0,s:Int=0,sc:Int=Color.TRANSPARENT)=GradientDrawable().apply{setColor(c);cornerRadius=dp(r).toFloat();if(s>0)setStroke(dp(s),sc)}
  private fun tv(v:String,z:Float,c:Int,b:Boolean=false)=TextView(this).apply{text=v;textSize=z;setTextColor(c);if(b)typeface=Typeface.create("sans-serif",Typeface.BOLD)}
@@ -132,8 +146,11 @@ class MainActivity : Activity() {
   }
   // Quora is the primary workflow: open the Space from its icon.
   socialRow.addView(socialIcon("Q",Color.rgb(185,43,39)){
-   if(copiedStoryLink==story.link&&!posted.getBoolean(story.link,false)){
+   val pending=copiedStoryLink ?: posted.getString(copiedKey,null)
+   if(pending==story.link&&!posted.getBoolean(story.link,false)){
     posted.edit().putBoolean(story.link,true).apply()
+    refreshPostedOnResume=true
+    Toast.makeText(this@MainActivity,"Marked as posted",Toast.LENGTH_SHORT).show()
    }
    startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(quoraSpace)))
   },LinearLayout.LayoutParams(0,dp(46),1f))
@@ -154,7 +171,8 @@ class MainActivity : Activity() {
   copyButton.setOnClickListener{
    (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",quoraPost))
    copiedStoryLink=story.link
-   Toast.makeText(this@MainActivity,"Quora post copied",Toast.LENGTH_SHORT).show()
+   posted.edit().putString(copiedKey,story.link).apply()
+   Toast.makeText(this@MainActivity,"Copied — now tap Q to open Quora",Toast.LENGTH_SHORT).show()
   }
   markButton.setOnClickListener{
    posted.edit().putBoolean(story.link,true).apply()
