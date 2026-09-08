@@ -15,6 +15,7 @@ import org.json.JSONArray
 
 class MainActivity : Activity() {
  private val feed="https://thedailyflare.com/wp-json/wp/v2/posts?per_page=30&_fields=link,title,excerpt"
+ private val quoraSpace="https://thedailyflare.quora.com/"
  private val posted by lazy { getSharedPreferences("posted", MODE_PRIVATE) }
  private val navy=Color.rgb(23,42,58); private val ink=Color.rgb(32,38,43)
  private val muted=Color.rgb(105,113,120); private val cream=Color.rgb(247,246,243)
@@ -96,7 +97,7 @@ class MainActivity : Activity() {
   card.addView(tv(ex,14f,muted).apply{setLineSpacing(dp(2).toFloat(),1f);setPadding(0,0,0,dp(16));maxLines=5})
   card.addView(tv("COPY FOR QUORA",13f,Color.WHITE,true).apply{gravity=Gravity.CENTER;background=shape(navy,14);setOnClickListener{val post=story.title+"\n\n"+ex+"\n\nRead the full story:\n"+story.link;(getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",post));Toast.makeText(this@MainActivity,"Quora post copied",Toast.LENGTH_SHORT).show()}},LinearLayout.LayoutParams(-1,dp(50)))
   val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
-  actions.addView(tv("Open Quora",13f,navy,true).apply{gravity=Gravity.CENTER;setOnClickListener{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.quora.com/")))}},LinearLayout.LayoutParams(0,dp(42),1f))
+  actions.addView(tv("Open Daily Flare Space",13f,navy,true).apply{gravity=Gravity.CENTER;setOnClickListener{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(quoraSpace)))}},LinearLayout.LayoutParams(0,dp(42),1f))
   actions.addView(tv("│",18f,Color.rgb(226,226,223)).apply{gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(1),dp(42)))
   actions.addView(tv(if(done)"Posted ✓" else "Mark as posted",13f,if(done)green else muted,true).apply{gravity=Gravity.CENTER;setOnClickListener{posted.edit().putBoolean(story.link,true).apply();Toast.makeText(this@MainActivity,"Marked as posted. Refresh to update status.",Toast.LENGTH_SHORT).show()}},LinearLayout.LayoutParams(0,dp(42),1f));card.addView(actions)
   list.addView(card);list.addView(Space(this).apply{minimumHeight=dp(12)})
