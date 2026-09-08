@@ -42,7 +42,7 @@ class MainActivity : Activity() {
   val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
   top.addView(tv("THE DAILY FLARE",21f,Color.WHITE,true).apply{letterSpacing=.08f},LinearLayout.LayoutParams(0,dp(48),1f))
   top.addView(tv("↻",28f,Color.WHITE,true).apply{gravity=Gravity.CENTER;background=shape(Color.argb(30,255,255,255),18);setOnClickListener{loadFeed()}},LinearLayout.LayoutParams(dp(52),dp(48)))
-  head.addView(top);head.addView(tv("QUORA SHARING DESK",11f,gold,true).apply{letterSpacing=.12f})
+  head.addView(top);head.addView(tv("SOCIAL SHARING DESK",11f,gold,true).apply{letterSpacing=.12f})
   head.addView(tv("Turn today's stories into ready-to-share posts.",15f,Color.rgb(220,226,230)).apply{setPadding(0,dp(5),0,0)})
   root.addView(head)
   val body=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(18),dp(18),dp(18),dp(8))}
@@ -123,7 +123,23 @@ class MainActivity : Activity() {
   card.addView(tv(story.title,19f,ink,true).apply{setPadding(0,dp(6),0,dp(9));maxLines=4})
   val ex=(if(story.excerpt.isBlank())"Read the latest report and discover the full details behind this story." else story.excerpt).take(460)
   card.addView(tv(ex,14f,muted).apply{setLineSpacing(dp(2).toFloat(),1f);setPadding(0,0,0,dp(16));maxLines=5})
-  card.addView(tv("COPY FOR QUORA",13f,Color.WHITE,true).apply{gravity=Gravity.CENTER;background=shape(navy,14);setOnClickListener{val post=ex+"\n\n"+story.link;(getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",post));copiedStoryLink=story.link;Toast.makeText(this@MainActivity,"Ready to paste in Quora",Toast.LENGTH_SHORT).show()}},LinearLayout.LayoutParams(-1,dp(50)))
+  val quoraPost=ex+"\n\n"+story.link
+  val socialRow=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
+  socialRow.addView(tv("COPY FOR QUORA",12f,Color.WHITE,true).apply{gravity=Gravity.CENTER;background=shape(navy,14);setOnClickListener{
+   (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",quoraPost))
+   copiedStoryLink=story.link
+   Toast.makeText(this@MainActivity,"Ready to paste in Quora",Toast.LENGTH_SHORT).show()
+  }},LinearLayout.LayoutParams(0,dp(50),1.25f))
+  socialRow.addView(Space(this).apply{minimumWidth=dp(8)})
+  socialRow.addView(tv("FACEBOOK",11f,navy,true).apply{gravity=Gravity.CENTER;background=shape(Color.rgb(235,240,244),14);setOnClickListener{
+   shareToApp("com.facebook.katana",ex+"\n\n"+story.link,"Facebook")
+  }},LinearLayout.LayoutParams(0,dp(50),.9f))
+  socialRow.addView(Space(this).apply{minimumWidth=dp(8)})
+  socialRow.addView(tv("𝕏",18f,navy,true).apply{gravity=Gravity.CENTER;background=shape(Color.rgb(235,240,244),14);setOnClickListener{
+   val xText=(story.title+"\n\n"+ex).take(250)+"\n"+story.link
+   shareToApp("com.twitter.android",xText,"X")
+  }},LinearLayout.LayoutParams(0,dp(50),.55f))
+  card.addView(socialRow)
   val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
   val openButton=tv("Open Daily Flare Space",13f,navy,true).apply{gravity=Gravity.CENTER}
   val markButton=tv(if(done)"Posted ✓" else "Mark as posted",13f,if(done)green else muted,true).apply{gravity=Gravity.CENTER}
@@ -146,6 +162,16 @@ class MainActivity : Activity() {
   actions.addView(tv("│",18f,Color.rgb(226,226,223)).apply{gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(1),dp(42)))
   actions.addView(markButton,LinearLayout.LayoutParams(0,dp(42),1f));card.addView(actions)
   list.addView(card);list.addView(Space(this).apply{minimumHeight=dp(12)})
+ }
+
+ private fun shareToApp(packageName:String,text:String,label:String){
+  val intent=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,text);setPackage(packageName)}
+  try{
+   startActivity(intent)
+  }catch(e:Exception){
+   val fallback=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,text)}
+   startActivity(Intent.createChooser(fallback,"Share to "+label))
+  }
  }
 
  private fun emptySearchCard()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(20),dp(22),dp(20),dp(22));addView(tv("No matching recent story.",18f,ink,true));addView(tv("Try a different keyword or clear your search.",14f,muted).apply{setPadding(0,dp(7),0,0)})}
