@@ -29,6 +29,7 @@ class MainActivity : Activity() {
  private lateinit var list:LinearLayout; private lateinit var status:TextView
  private lateinit var searchBox:EditText
  private var allStories:List<Story> = emptyList()
+ private var copiedStoryLink:String? = null
 
  override fun onCreate(b:Bundle?){super.onCreate(b); render(); loadFeed()}
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
@@ -122,11 +123,28 @@ class MainActivity : Activity() {
   card.addView(tv(story.title,19f,ink,true).apply{setPadding(0,dp(6),0,dp(9));maxLines=4})
   val ex=(if(story.excerpt.isBlank())"Read the latest report and discover the full details behind this story." else story.excerpt).take(460)
   card.addView(tv(ex,14f,muted).apply{setLineSpacing(dp(2).toFloat(),1f);setPadding(0,0,0,dp(16));maxLines=5})
-  card.addView(tv("COPY FOR QUORA",13f,Color.WHITE,true).apply{gravity=Gravity.CENTER;background=shape(navy,14);setOnClickListener{val post=ex+"\n\n"+story.link;(getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",post));Toast.makeText(this@MainActivity,"Clean Quora post copied",Toast.LENGTH_SHORT).show()}},LinearLayout.LayoutParams(-1,dp(50)))
+  card.addView(tv("COPY FOR QUORA",13f,Color.WHITE,true).apply{gravity=Gravity.CENTER;background=shape(navy,14);setOnClickListener{val post=ex+"\n\n"+story.link;(getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",post));copiedStoryLink=story.link;Toast.makeText(this@MainActivity,"Ready to paste in Quora",Toast.LENGTH_SHORT).show()}},LinearLayout.LayoutParams(-1,dp(50)))
   val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
-  actions.addView(tv("Open Daily Flare Space",13f,navy,true).apply{gravity=Gravity.CENTER;setOnClickListener{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(quoraSpace)))}},LinearLayout.LayoutParams(0,dp(42),1f))
+  val openButton=tv("Open Daily Flare Space",13f,navy,true).apply{gravity=Gravity.CENTER}
+  val markButton=tv(if(done)"Posted ✓" else "Mark as posted",13f,if(done)green else muted,true).apply{gravity=Gravity.CENTER}
+  openButton.setOnClickListener{
+   if(copiedStoryLink==story.link&&!posted.getBoolean(story.link,false)){
+    posted.edit().putBoolean(story.link,true).apply()
+    markButton.text="Posted ✓"
+    markButton.setTextColor(green)
+    Toast.makeText(this@MainActivity,"Marked as posted",Toast.LENGTH_SHORT).show()
+   }
+   startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(quoraSpace)))
+  }
+  markButton.setOnClickListener{
+   posted.edit().putBoolean(story.link,true).apply()
+   markButton.text="Posted ✓"
+   markButton.setTextColor(green)
+   Toast.makeText(this@MainActivity,"Marked as posted",Toast.LENGTH_SHORT).show()
+  }
+  actions.addView(openButton,LinearLayout.LayoutParams(0,dp(42),1f))
   actions.addView(tv("│",18f,Color.rgb(226,226,223)).apply{gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(1),dp(42)))
-  actions.addView(tv(if(done)"Posted ✓" else "Mark as posted",13f,if(done)green else muted,true).apply{gravity=Gravity.CENTER;setOnClickListener{posted.edit().putBoolean(story.link,true).apply();Toast.makeText(this@MainActivity,"Marked as posted. Refresh to update status.",Toast.LENGTH_SHORT).show()}},LinearLayout.LayoutParams(0,dp(42),1f));card.addView(actions)
+  actions.addView(markButton,LinearLayout.LayoutParams(0,dp(42),1f));card.addView(actions)
   list.addView(card);list.addView(Space(this).apply{minimumHeight=dp(12)})
  }
 
