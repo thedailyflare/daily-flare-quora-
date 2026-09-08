@@ -9,11 +9,12 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.*
+import java.net.HttpURLConnection
 import java.net.URL
-import javax.xml.parsers.DocumentBuilderFactory
+import org.json.JSONArray
 
 class MainActivity : Activity() {
- private val feed="https://thedailyflare.com/feed/"
+ private val feed="https://thedailyflare.com/wp-json/wp/v2/posts?per_page=30&_fields=link,title,excerpt"
  private val posted by lazy { getSharedPreferences("posted", MODE_PRIVATE) }
  private val navy=Color.rgb(23,42,58); private val ink=Color.rgb(32,38,43)
  private val muted=Color.rgb(105,113,120); private val cream=Color.rgb(247,246,243)
@@ -45,13 +46,45 @@ class MainActivity : Activity() {
 
  private fun loadFeed(){
   status.text="Refreshing stories…";list.removeAllViews()
-  Thread{try{
-   val f=DocumentBuilderFactory.newInstance().apply{isNamespaceAware=false;setFeature("http://apache.org/xml/features/disallow-doctype-decl",true)}
-   val doc=f.newDocumentBuilder().parse(URL(feed).openStream());val items=doc.getElementsByTagName("item");val stories=mutableListOf<Story>()
-   for(i in 0 until items.length.coerceAtMost(30)){val n=items.item(i) as org.w3c.dom.Element;val title=n.getElementsByTagName("title").item(0)?.textContent?.trim().orEmpty();val link=n.getElementsByTagName("link").item(0)?.textContent?.trim().orEmpty();val raw=n.getElementsByTagName("description").item(0)?.textContent.orEmpty();val ex=raw.replace(Regex("<[^>]*>")," ").replace(Regex("\\s+")," ").trim();if(title.isNotBlank()&&link.isNotBlank())stories.add(Story(title,link,ex))}
-   runOnUiThread{status.text=if(stories.isEmpty())"No stories found" else "Latest stories";stories.forEachIndexed{i,s->addCard(s,i+1)}}
-  }catch(e:Exception){runOnUiThread{status.text="Unable to load stories";list.addView(errorCard())}}}.start()
+  Thread{
+   try{
+    val connection=URL(feed).openConnection() as HttpURLConnection
+    connection.connectTimeout=15000
+    connection.readTimeout=15000
+    connection.setRequestProperty("User-Agent","DailyFlareQuora/1.0")
+    connection.connect()
+    if(connection.responseCode !in 200..299) throw Exception("HTTP "+connection.responseCode)
+    val json=connection.inputStream.bufferedReader().use{it.readText()}
+    val posts=JSONArray(json)
+    val stories=mutableListOf<Story>()
+    for(i in 0 until posts.length()){
+     val post=posts.getJSONObject(i)
+     val title=stripHtml(post.getJSONObject("title").optString("rendered"))
+     val link=post.optString("link")
+     val excerpt=stripHtml(post.getJSONObject("excerpt").optString("rendered"))
+     if(title.isNotBlank()&&link.isNotBlank()) stories.add(Story(title,link,excerpt))
+    }
+    connection.disconnect()
+    runOnUiThread{
+     status.text=if(stories.isEmpty())"No stories found" else "Latest stories"
+     stories.forEachIndexed{i,s->addCard(s,i+1)}
+    }
+   }catch(e:Exception){
+    runOnUiThread{
+     status.text="Unable to load stories"
+     list.addView(errorCard())
+    }
+   }
+  }.start()
  }
+
+ private fun stripHtml(value:String)=value
+  .replace(Regex("<[^>]*>")," ")
+  .replace("&nbsp;"," ")
+  .replace("&amp;","&")
+  .replace("&#8217;","'")
+  .replace(Regex("\\s+")," ")
+  .trim()
 
  private fun addCard(story:Story,number:Int){
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(18),dp(17),dp(18),dp(17))}
@@ -69,6 +102,6 @@ class MainActivity : Activity() {
   list.addView(card);list.addView(Space(this).apply{minimumHeight=dp(12)})
  }
 
- private fun errorCard()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(20),dp(22),dp(20),dp(22));addView(tv("We couldn't reach the feed.",18f,ink,true));addView(tv("Check your connection and tap refresh to try again.",14f,muted).apply{setPadding(0,dp(7),0,0)})}
+ private fun errorCard()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(20),dp(22),dp(20),dp(22));addView(tv("We couldn't load the latest stories.",18f,ink,true));addView(tv("Please check your connection and tap refresh to try again.",14f,muted).apply{setPadding(0,dp(7),0,0)})}
  data class Story(val title:String,val link:String,val excerpt:String)
 }
