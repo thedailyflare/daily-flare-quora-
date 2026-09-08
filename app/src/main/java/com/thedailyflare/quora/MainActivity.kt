@@ -125,38 +125,36 @@ class MainActivity : Activity() {
   card.addView(tv(ex,14f,muted).apply{setLineSpacing(dp(2).toFloat(),1f);setPadding(0,0,0,dp(16));maxLines=5})
   val quoraPost=ex+"\n\n"+story.link
   val socialRow=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
-  fun socialIcon(label:String, action:()->Unit):TextView=tv(label,16f,navy,true).apply{
+  fun socialIcon(label:String,bg:Int,fg:Int=Color.WHITE,action:()->Unit):TextView=tv(label,15f,fg,true).apply{
    gravity=Gravity.CENTER
-   background=shape(Color.rgb(235,240,244),14)
+   background=shape(bg,16)
    setOnClickListener{action()}
   }
-  socialRow.addView(socialIcon("Q"){
-   (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",quoraPost))
-   copiedStoryLink=story.link
-   Toast.makeText(this@MainActivity,"Ready for Quora",Toast.LENGTH_SHORT).show()
-  },LinearLayout.LayoutParams(0,dp(50),1f))
-  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("f"){shareToApp("com.facebook.katana",ex+"\n\n"+story.link,"Facebook")},LinearLayout.LayoutParams(0,dp(50),1f))
-  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("𝕏"){val xText=(story.title+"\n\n"+ex).take(250)+"\n"+story.link;shareToApp("com.twitter.android",xText,"X")},LinearLayout.LayoutParams(0,dp(50),1f))
-  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("@"){shareToApp("com.instagram.barcelona",ex+"\n\n"+story.link,"Threads")},LinearLayout.LayoutParams(0,dp(50),1f))
-  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("t"){shareToApp("com.tumblr",ex+"\n\n"+story.link,"Tumblr")},LinearLayout.LayoutParams(0,dp(50),1f))
-  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("in"){shareToApp("com.linkedin.android",story.title+"\n\n"+ex+"\n\n"+story.link,"LinkedIn")},LinearLayout.LayoutParams(0,dp(50),1f))
-  card.addView(socialRow)
-  val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
-  val openButton=tv("Open Daily Flare Space",13f,navy,true).apply{gravity=Gravity.CENTER}
-  val markButton=tv(if(done)"Posted ✓" else "Mark as posted",13f,if(done)green else muted,true).apply{gravity=Gravity.CENTER}
-  openButton.setOnClickListener{
+  // Quora is the primary workflow: open the Space from its icon.
+  socialRow.addView(socialIcon("Q",Color.rgb(185,43,39)){
    if(copiedStoryLink==story.link&&!posted.getBoolean(story.link,false)){
     posted.edit().putBoolean(story.link,true).apply()
-    markButton.text="Posted ✓"
-    markButton.setTextColor(green)
-    Toast.makeText(this@MainActivity,"Marked as posted",Toast.LENGTH_SHORT).show()
    }
    startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(quoraSpace)))
+  },LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
+  socialRow.addView(socialIcon("f",Color.rgb(24,119,242)){shareToApp("com.facebook.katana",ex+"\n\n"+story.link,"Facebook")},LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
+  socialRow.addView(socialIcon("𝕏",Color.rgb(25,25,25)){val xText=(story.title+"\n\n"+ex).take(250)+"\n"+story.link;shareToApp("com.twitter.android",xText,"X")},LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
+  socialRow.addView(socialIcon("@",Color.rgb(35,35,35)){shareToApp("com.instagram.barcelona",ex+"\n\n"+story.link,"Threads")},LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
+  socialRow.addView(socialIcon("t",Color.rgb(52,70,93)){shareToApp("com.tumblr",ex+"\n\n"+story.link,"Tumblr")},LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
+  socialRow.addView(socialIcon("in",Color.rgb(10,102,194)){shareToApp("com.linkedin.android",story.title+"\n\n"+ex+"\n\n"+story.link,"LinkedIn")},LinearLayout.LayoutParams(0,dp(46),1f))
+  card.addView(socialRow)
+  val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
+  val copyButton=tv("Copy for Quora",13f,navy,true).apply{gravity=Gravity.CENTER}
+  val markButton=tv(if(done)"Posted ✓" else "Mark as posted",13f,if(done)green else muted,true).apply{gravity=Gravity.CENTER}
+  copyButton.setOnClickListener{
+   (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",quoraPost))
+   copiedStoryLink=story.link
+   Toast.makeText(this@MainActivity,"Quora post copied",Toast.LENGTH_SHORT).show()
   }
   markButton.setOnClickListener{
    posted.edit().putBoolean(story.link,true).apply()
@@ -164,7 +162,7 @@ class MainActivity : Activity() {
    markButton.setTextColor(green)
    Toast.makeText(this@MainActivity,"Marked as posted",Toast.LENGTH_SHORT).show()
   }
-  actions.addView(openButton,LinearLayout.LayoutParams(0,dp(42),1f))
+  actions.addView(copyButton,LinearLayout.LayoutParams(0,dp(42),1f))
   actions.addView(tv("│",18f,Color.rgb(226,226,223)).apply{gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(1),dp(42)))
   actions.addView(markButton,LinearLayout.LayoutParams(0,dp(42),1f));card.addView(actions)
   list.addView(card);list.addView(Space(this).apply{minimumHeight=dp(12)})
