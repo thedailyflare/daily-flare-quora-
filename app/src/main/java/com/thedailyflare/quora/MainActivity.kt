@@ -60,7 +60,7 @@ class MainActivity : Activity() {
   val done=posted.getBoolean(story.link,false);if(done)meta.addView(tv("POSTED ✓",10f,green,true).apply{background=shape(Color.rgb(228,239,232),12);setPadding(dp(9),dp(5),dp(9),dp(5))});card.addView(meta)
   card.addView(tv(story.title,19f,ink,true).apply{setPadding(0,dp(6),0,dp(9));maxLines=4})
   val ex=(if(story.excerpt.isBlank())"Read the latest report and discover the full details behind this story." else story.excerpt).take(460)
-  card.addView(tv(ex,14f,muted).apply{lineSpacingExtra=dp(2).toFloat();setPadding(0,0,0,dp(16));maxLines=5})
+  card.addView(tv(ex,14f,muted).apply{setLineSpacing(dp(2).toFloat(),1f);setPadding(0,0,0,dp(16));maxLines=5})
   card.addView(tv("COPY FOR QUORA",13f,Color.WHITE,true).apply{gravity=Gravity.CENTER;background=shape(navy,14);setOnClickListener{val post=story.title+"\n\n"+ex+"\n\nRead the full story:\n"+story.link;(getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",post));Toast.makeText(this@MainActivity,"Quora post copied",Toast.LENGTH_SHORT).show()}},LinearLayout.LayoutParams(-1,dp(50)))
   val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
   actions.addView(tv("Open Quora",13f,navy,true).apply{gravity=Gravity.CENTER;setOnClickListener{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.quora.com/")))}},LinearLayout.LayoutParams(0,dp(42),1f))
