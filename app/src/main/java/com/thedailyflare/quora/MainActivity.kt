@@ -125,20 +125,26 @@ class MainActivity : Activity() {
   card.addView(tv(ex,14f,muted).apply{setLineSpacing(dp(2).toFloat(),1f);setPadding(0,0,0,dp(16));maxLines=5})
   val quoraPost=ex+"\n\n"+story.link
   val socialRow=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
-  socialRow.addView(tv("COPY FOR QUORA",12f,Color.WHITE,true).apply{gravity=Gravity.CENTER;background=shape(navy,14);setOnClickListener{
+  fun socialIcon(label:String, action:()->Unit):TextView=tv(label,16f,navy,true).apply{
+   gravity=Gravity.CENTER
+   background=shape(Color.rgb(235,240,244),14)
+   setOnClickListener{action()}
+  }
+  socialRow.addView(socialIcon("Q"){
    (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",quoraPost))
    copiedStoryLink=story.link
-   Toast.makeText(this@MainActivity,"Ready to paste in Quora",Toast.LENGTH_SHORT).show()
-  }},LinearLayout.LayoutParams(0,dp(50),1.25f))
-  socialRow.addView(Space(this).apply{minimumWidth=dp(8)})
-  socialRow.addView(tv("FACEBOOK",11f,navy,true).apply{gravity=Gravity.CENTER;background=shape(Color.rgb(235,240,244),14);setOnClickListener{
-   shareToApp("com.facebook.katana",ex+"\n\n"+story.link,"Facebook")
-  }},LinearLayout.LayoutParams(0,dp(50),.9f))
-  socialRow.addView(Space(this).apply{minimumWidth=dp(8)})
-  socialRow.addView(tv("𝕏",18f,navy,true).apply{gravity=Gravity.CENTER;background=shape(Color.rgb(235,240,244),14);setOnClickListener{
-   val xText=(story.title+"\n\n"+ex).take(250)+"\n"+story.link
-   shareToApp("com.twitter.android",xText,"X")
-  }},LinearLayout.LayoutParams(0,dp(50),.55f))
+   Toast.makeText(this@MainActivity,"Ready for Quora",Toast.LENGTH_SHORT).show()
+  },LinearLayout.LayoutParams(0,dp(50),1f))
+  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
+  socialRow.addView(socialIcon("f"){shareToApp("com.facebook.katana",ex+"\n\n"+story.link,"Facebook")},LinearLayout.LayoutParams(0,dp(50),1f))
+  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
+  socialRow.addView(socialIcon("𝕏"){val xText=(story.title+"\n\n"+ex).take(250)+"\n"+story.link;shareToApp("com.twitter.android",xText,"X")},LinearLayout.LayoutParams(0,dp(50),1f))
+  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
+  socialRow.addView(socialIcon("@"){shareToApp("com.instagram.barcelona",ex+"\n\n"+story.link,"Threads")},LinearLayout.LayoutParams(0,dp(50),1f))
+  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
+  socialRow.addView(socialIcon("t"){shareToApp("com.tumblr",ex+"\n\n"+story.link,"Tumblr")},LinearLayout.LayoutParams(0,dp(50),1f))
+  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
+  socialRow.addView(socialIcon("in"){shareToApp("com.linkedin.android",story.title+"\n\n"+ex+"\n\n"+story.link,"LinkedIn")},LinearLayout.LayoutParams(0,dp(50),1f))
   card.addView(socialRow)
   val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
   val openButton=tv("Open Daily Flare Space",13f,navy,true).apply{gravity=Gravity.CENTER}
