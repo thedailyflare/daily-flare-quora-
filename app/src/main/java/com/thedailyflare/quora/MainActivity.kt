@@ -8,19 +8,27 @@ import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
+import android.text.Editable
+import android.text.TextWatcher
 import android.widget.*
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import java.util.TimeZone
 import java.net.HttpURLConnection
 import java.net.URL
 import org.json.JSONArray
 
 class MainActivity : Activity() {
- private val feed="https://thedailyflare.com/wp-json/wp/v2/posts?per_page=30&_fields=link,title,excerpt"
+ private val feedBase="https://thedailyflare.com/wp-json/wp/v2/posts?per_page=30&_fields=link,title,excerpt,date"
  private val quoraSpace="https://thedailyflare.quora.com/"
  private val posted by lazy { getSharedPreferences("posted", MODE_PRIVATE) }
  private val navy=Color.rgb(23,42,58); private val ink=Color.rgb(32,38,43)
  private val muted=Color.rgb(105,113,120); private val cream=Color.rgb(247,246,243)
  private val gold=Color.rgb(201,168,106); private val green=Color.rgb(71,117,91)
  private lateinit var list:LinearLayout; private lateinit var status:TextView
+ private lateinit var searchBox:EditText
+ private var allStories:List<Story> = emptyList()
 
  override fun onCreate(b:Bundle?){super.onCreate(b); render(); loadFeed()}
  private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
@@ -39,16 +47,22 @@ class MainActivity : Activity() {
   val body=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(18),dp(18),dp(18),dp(8))}
   val row=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL};status=tv("Loading latest stories…",18f,ink,true)
   row.addView(status,LinearLayout.LayoutParams(0,dp(40),1f));row.addView(tv("LIVE",10f,green,true).apply{gravity=Gravity.CENTER;background=shape(Color.rgb(228,239,232),14);setPadding(dp(10),dp(6),dp(10),dp(6))});body.addView(row)
-  body.addView(tv("Choose a story, copy the prepared post, then share it on Quora.",13f,muted).apply{setPadding(0,0,0,dp(12))})
+  body.addView(tv("Fresh stories from the last 3 days. Search anytime to find a recent article.",13f,muted).apply{setPadding(0,0,0,dp(12))})
+  searchBox=EditText(this).apply{hint="Search recent stories";textSize=15f;setTextColor(ink);setHintTextColor(muted);singleLine=true;setPadding(dp(16),0,dp(16),0);background=shape(Color.WHITE,14,1,Color.rgb(225,225,222));addTextChangedListener(object:TextWatcher{override fun beforeTextChanged(s:CharSequence?,st:Int,count:Int,after:Int){};override fun onTextChanged(s:CharSequence?,st:Int,before:Int,count:Int){filterStories(s?.toString().orEmpty())};override fun afterTextChanged(s:Editable?){}})}
+  body.addView(searchBox,LinearLayout.LayoutParams(-1,dp(52)).apply{bottomMargin=dp(12)})
   val scroll=ScrollView(this);list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};scroll.addView(list);body.addView(scroll,LinearLayout.LayoutParams(-1,0,1f));root.addView(body,LinearLayout.LayoutParams(-1,0,1f))
   root.addView(tv("THE DAILY FLARE  •  NEWS THAT MATTERS",10f,muted,true).apply{gravity=Gravity.CENTER;background=shape(Color.WHITE);setPadding(dp(18),dp(14),dp(18),dp(16));letterSpacing=.08f})
   setContentView(root)
  }
 
  private fun loadFeed(){
-  status.text="Refreshing stories…";list.removeAllViews()
+  status.text="Refreshing recent stories…";list.removeAllViews()
   Thread{
    try{
+    val calendar=Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply{add(Calendar.DAY_OF_YEAR,-3)}
+    val formatter=SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US).apply{timeZone=TimeZone.getTimeZone("UTC")}
+    val after=formatter.format(calendar.time)
+    val feed=feedBase+"&after="+java.net.URLEncoder.encode(after,"UTF-8")
     val connection=URL(feed).openConnection() as HttpURLConnection
     connection.connectTimeout=15000
     connection.readTimeout=15000
@@ -67,8 +81,8 @@ class MainActivity : Activity() {
     }
     connection.disconnect()
     runOnUiThread{
-     status.text=if(stories.isEmpty())"No stories found" else "Latest stories"
-     stories.forEachIndexed{i,s->addCard(s,i+1)}
+     allStories=stories
+     filterStories(searchBox.text?.toString().orEmpty())
     }
    }catch(e:Exception){
     runOnUiThread{
@@ -77,6 +91,19 @@ class MainActivity : Activity() {
     }
    }
   }.start()
+ }
+
+ private fun filterStories(query:String){
+  val q=query.trim().lowercase(Locale.getDefault())
+  val filtered=if(q.isBlank()) allStories else allStories.filter{it.title.lowercase(Locale.getDefault()).contains(q)||it.excerpt.lowercase(Locale.getDefault()).contains(q)}
+  status.text=when{
+   allStories.isEmpty()->"No recent stories"
+   q.isNotBlank()&&filtered.isEmpty()->"No matches found"
+   else->"Recent stories"
+  }
+  list.removeAllViews()
+  filtered.forEachIndexed{i,s->addCard(s,i+1)}
+  if(filtered.isEmpty()&&allStories.isNotEmpty()) list.addView(emptySearchCard())
  }
 
  private fun stripHtml(value:String)=value
@@ -95,13 +122,15 @@ class MainActivity : Activity() {
   card.addView(tv(story.title,19f,ink,true).apply{setPadding(0,dp(6),0,dp(9));maxLines=4})
   val ex=(if(story.excerpt.isBlank())"Read the latest report and discover the full details behind this story." else story.excerpt).take(460)
   card.addView(tv(ex,14f,muted).apply{setLineSpacing(dp(2).toFloat(),1f);setPadding(0,0,0,dp(16));maxLines=5})
-  card.addView(tv("COPY FOR QUORA",13f,Color.WHITE,true).apply{gravity=Gravity.CENTER;background=shape(navy,14);setOnClickListener{val post=story.title+"\n\n"+ex+"\n\nRead the full story:\n"+story.link;(getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",post));Toast.makeText(this@MainActivity,"Quora post copied",Toast.LENGTH_SHORT).show()}},LinearLayout.LayoutParams(-1,dp(50)))
+  card.addView(tv("COPY FOR QUORA",13f,Color.WHITE,true).apply{gravity=Gravity.CENTER;background=shape(navy,14);setOnClickListener{val post=ex+"\n\n"+story.link;(getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",post));Toast.makeText(this@MainActivity,"Clean Quora post copied",Toast.LENGTH_SHORT).show()}},LinearLayout.LayoutParams(-1,dp(50)))
   val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
   actions.addView(tv("Open Daily Flare Space",13f,navy,true).apply{gravity=Gravity.CENTER;setOnClickListener{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(quoraSpace)))}},LinearLayout.LayoutParams(0,dp(42),1f))
   actions.addView(tv("│",18f,Color.rgb(226,226,223)).apply{gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(1),dp(42)))
   actions.addView(tv(if(done)"Posted ✓" else "Mark as posted",13f,if(done)green else muted,true).apply{gravity=Gravity.CENTER;setOnClickListener{posted.edit().putBoolean(story.link,true).apply();Toast.makeText(this@MainActivity,"Marked as posted. Refresh to update status.",Toast.LENGTH_SHORT).show()}},LinearLayout.LayoutParams(0,dp(42),1f));card.addView(actions)
   list.addView(card);list.addView(Space(this).apply{minimumHeight=dp(12)})
  }
+
+ private fun emptySearchCard()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(20),dp(22),dp(20),dp(22));addView(tv("No matching recent story.",18f,ink,true));addView(tv("Try a different keyword or clear your search.",14f,muted).apply{setPadding(0,dp(7),0,0)})}
 
  private fun errorCard()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(20),dp(22),dp(20),dp(22));addView(tv("We couldn't load the latest stories.",18f,ink,true));addView(tv("Please check your connection and tap refresh to try again.",14f,muted).apply{setPadding(0,dp(7),0,0)})}
  data class Story(val title:String,val link:String,val excerpt:String)
