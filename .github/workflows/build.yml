@@ -6,6 +6,7 @@ on:
       - main
   workflow_dispatch:
 
+# Standard Android APK build
 jobs:
   build:
     name: Build Debug APK
