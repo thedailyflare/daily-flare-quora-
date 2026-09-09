@@ -21,7 +21,7 @@ import java.net.URL
 import org.json.JSONArray
 
 class MainActivity : Activity() {
- private val feedBase="https://thedailyflare.com/wp-json/wp/v2/posts?per_page=30&_fields=link,title,excerpt,date"
+ private val feedBase="https://thedailyflare.com/wp-json/wp/v2/posts?per_page=30&_embed=1&_fields=link,title,excerpt,date,tags,_embedded"
  private val quoraSpace="https://thedailyflare.quora.com/"
  private val searchConsoleUrl="https://search.google.com/search-console?utm_source=about-page&resource_id=sc-domain:thedailyflare.com"
  private val posted by lazy { getSharedPreferences("posted", MODE_PRIVATE) }
@@ -35,6 +35,23 @@ class MainActivity : Activity() {
  private var copiedStoryLink:String? = null
  private var refreshPostedOnResume=false
  private val copiedKey="copied_story_link"
+ private val instagramCtas=listOf(
+  "❤️ Like this one if you want more updates like it.",
+  "❤️ If you enjoyed this update, leave a like.",
+  "❤️ Give this one a little love. ❤️",
+  "🔄 Know someone who'd find this interesting? Send it their way.",
+  "🔄 Think someone should see this? Share it with them.",
+  "🔄 This one is worth passing along. 🔄",
+  "➕ Follow us for more like this.",
+  "➕ Stick around — there's more coming. 😉",
+  "➕ Follow us so you don't lose us. 😁",
+  "📰 Stay informed — follow The Daily Flare for more.",
+  "🌍 Keep up with the story — follow for more updates.",
+  "📲 Want more updates? Follow The Daily Flare.",
+  "👀 Stay tuned for more developments.",
+  "📰 More updates are coming — follow The Daily Flare.",
+  "🌐 Follow along for the latest developments."
+ )
  private fun platformKey(platform:String,link:String)="posted_"+platform+"_"+link
 
  override fun onCreate(b:Bundle?){
@@ -94,12 +111,29 @@ class MainActivity : Activity() {
      val title=stripHtml(post.getJSONObject("title").optString("rendered"))
      val link=post.optString("link")
      val excerpt=stripHtml(post.getJSONObject("excerpt").optString("rendered"))
-     if(title.isNotBlank()&&link.isNotBlank())stories.add(Story(title,link,excerpt))
+     val tags=extractPostTags(post)
+     if(title.isNotBlank()&&link.isNotBlank())stories.add(Story(title,link,excerpt,tags))
     }
     connection.disconnect()
     runOnUiThread{allStories=stories;filterStories(searchBox.text?.toString().orEmpty());if(::swipeRefresh.isInitialized)swipeRefresh.isRefreshing=false}
    }catch(e:Exception){runOnUiThread{status.text="Unable to load stories";list.addView(errorCard());if(::swipeRefresh.isInitialized)swipeRefresh.isRefreshing=false}}
   }.start()
+ }
+
+ private fun extractPostTags(post:org.json.JSONObject):List<String>{
+  val result=mutableListOf<String>()
+  val embedded=post.optJSONObject("_embedded") ?: return result
+  val terms=embedded.optJSONArray("wp:term") ?: return result
+  for(i in 0 until terms.length()){
+   val group=terms.optJSONArray(i) ?: continue
+   for(j in 0 until group.length()){
+    val term=group.optJSONObject(j) ?: continue
+    if(term.optString("taxonomy")!="post_tag") continue
+    val name=stripHtml(term.optString("name")).trim()
+    if(name.isNotBlank()&&!result.contains(name))result.add(name)
+   }
+  }
+  return result.take(3)
  }
 
  private fun filterStories(query:String){
@@ -111,6 +145,32 @@ class MainActivity : Activity() {
  }
 
  private fun stripHtml(value:String)=value.replace(Regex("<[^>]*>")," ").replace("&nbsp;"," ").replace("&amp;","&").replace("&#8217;","'").replace(Regex("\\s+")," ").trim()
+
+ private fun hashtag(tag:String):String{
+  val clean=tag.trim().removePrefix("#")
+  val compact=clean.replace(Regex("[^\\p{L}\\p{N}]"),"")
+  return if(compact.isBlank())"" else "#"+compact
+ }
+
+ private fun instagramPost(excerpt:String,tags:List<String>):String{
+  val cta=instagramCtas.random()
+  val hashtags=tags.take(3).mapNotNull{hashtag(it).takeIf{h->h.isNotBlank()}}
+  val parts=mutableListOf<String>()
+  parts.add(excerpt)
+  parts.add(cta)
+  if(hashtags.isNotEmpty())parts.add(hashtags.joinToString(" "))
+  return parts.joinToString("\n\n")
+ }
+
+ private fun copyInstagramAndOpen(story:Story,ex:String){
+  val text=instagramPost(ex,story.tags)
+  (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Instagram post",text))
+  Toast.makeText(this,"Instagram post copied — paste it into Instagram",Toast.LENGTH_LONG).show()
+  try{
+   val launch=packageManager.getLaunchIntentForPackage("com.instagram.android")
+   if(launch!=null)startActivity(launch)else startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.instagram.com/")))
+  }catch(e:Exception){startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.instagram.com/")))}
+ }
 
  private fun addCard(story:Story,number:Int){
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(18),dp(17),dp(18),dp(17))}
@@ -150,6 +210,7 @@ class MainActivity : Activity() {
   addSocial(row2,socialIcon("t",Color.rgb(52,70,93),"tumblr"){shareToApp("com.tumblr",ex+"\n\n"+story.link,"Tumblr")})
   addSocial(row2,socialIcon("in",Color.rgb(10,102,194),"linkedin"){shareToApp("com.linkedin.android",ex+"\n\n"+story.link,"LinkedIn")})
   addSocial(row2,socialIcon("G",Color.rgb(66,133,244),"search_console"){copyArticleUrlAndOpenSearchConsole(story)})
+  addSocial(row2,socialIcon("◎",Color.rgb(193,53,132),"instagram"){copyInstagramAndOpen(story,ex)})
   socialRows.addView(row1);socialRows.addView(row2);card.addView(socialRows)
   val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
   val copyButton=tv("Copy for Quora",13f,navy,true).apply{gravity=Gravity.CENTER}
@@ -180,5 +241,5 @@ class MainActivity : Activity() {
 
  private fun emptySearchCard()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(20),dp(22),dp(20),dp(22));addView(tv("No matching recent story.",18f,ink,true));addView(tv("Try a different keyword or clear your search.",14f,muted).apply{setPadding(0,dp(7),0,0)})}
  private fun errorCard()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(20),dp(22),dp(20),dp(22));addView(tv("We couldn't load the latest stories.",18f,ink,true));addView(tv("Please check your connection and pull down to refresh.",14f,muted).apply{setPadding(0,dp(7),0,0)})}
- data class Story(val title:String,val link:String,val excerpt:String)
+ data class Story(val title:String,val link:String,val excerpt:String,val tags:List<String>)
 }
