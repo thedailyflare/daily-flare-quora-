@@ -23,7 +23,7 @@ import org.json.JSONArray
 class MainActivity : Activity() {
  private val feedBase="https://thedailyflare.com/wp-json/wp/v2/posts?per_page=30&_fields=link,title,excerpt,date"
  private val quoraSpace="https://thedailyflare.quora.com/"
- private val searchConsoleBase="https://search.google.com/search-console/inspect?resource_id=https://thedailyflare.com/&id="
+ private val searchConsoleUrl="https://search.google.com/search-console?utm_source=about-page&resource_id=sc-domain:thedailyflare.com"
  private val posted by lazy { getSharedPreferences("posted", MODE_PRIVATE) }
  private val navy=Color.rgb(23,42,58); private val ink=Color.rgb(32,38,43)
  private val muted=Color.rgb(105,113,120); private val cream=Color.rgb(247,246,243)
@@ -164,8 +164,7 @@ class MainActivity : Activity() {
 
  private fun copyArticleUrlAndOpenSearchConsole(story:Story){
   (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Article URL",story.link))
-  val inspectionUrl=searchConsoleBase+Uri.encode(story.link)
-  try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(inspectionUrl)))}catch(e:Exception){startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://search.google.com/search-console/")))}
+  try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(searchConsoleUrl)))}catch(e:Exception){startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://search.google.com/search-console/")))}
  }
 
  private fun shareViaTarget(packageName:String,text:String,label:String){
