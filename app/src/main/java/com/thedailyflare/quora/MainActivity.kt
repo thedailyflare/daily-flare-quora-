@@ -34,6 +34,7 @@ class MainActivity : Activity() {
  private var copiedStoryLink:String? = null
  private var refreshPostedOnResume=false
  private val copiedKey="copied_story_link"
+ private fun platformKey(platform:String,link:String)="posted_"+platform+"_"+link
 
  override fun onCreate(b:Bundle?){
   super.onCreate(b)
@@ -147,13 +148,19 @@ class MainActivity : Activity() {
   val ex=(if(story.excerpt.isBlank())"Read the latest report and discover the full details behind this story." else story.excerpt).take(460)
   val quoraPost=ex+"\n\n"+story.link
   val socialRow=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
-  fun socialIcon(label:String,bg:Int,fg:Int=Color.WHITE,action:()->Unit):TextView=tv(label,15f,fg,true).apply{
-   gravity=Gravity.CENTER
-   background=shape(bg,16)
-   setOnClickListener{action()}
+  fun socialIcon(label:String,bg:Int,platform:String,action:()->Unit):TextView{
+   val icon=tv(label,15f,Color.WHITE,true).apply{gravity=Gravity.CENTER}
+   fun paint(done:Boolean){icon.background=shape(if(done)Color.rgb(175,178,180) else bg,16);icon.alpha=if(done).55f else 1f}
+   paint(posted.getBoolean(platformKey(platform,story.link),false))
+   icon.setOnClickListener{
+    action()
+    posted.edit().putBoolean(platformKey(platform,story.link),true).apply()
+    paint(true)
+   }
+   return icon
   }
   // Quora is the primary workflow: open the Space from its icon.
-  socialRow.addView(socialIcon("Q",Color.rgb(185,43,39)){
+  socialRow.addView(socialIcon("Q",Color.rgb(185,43,39),"quora"){
    val pending=copiedStoryLink ?: posted.getString(copiedKey,null)
    if(pending==story.link&&!posted.getBoolean(story.link,false)){
     posted.edit().putBoolean(story.link,true).apply()
@@ -163,15 +170,19 @@ class MainActivity : Activity() {
    startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(quoraSpace)))
   },LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("f",Color.rgb(24,119,242)){shareToApp("com.facebook.katana",ex+"\n\n"+story.link,"Facebook")},LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(socialIcon("f",Color.rgb(24,119,242),"facebook"){
+   (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Facebook post",ex+"\n\n"+story.link))
+   Toast.makeText(this@MainActivity,"Facebook post copied",Toast.LENGTH_SHORT).show()
+   shareToApp("com.facebook.katana",story.link,"Facebook")
+  },LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("𝕏",Color.rgb(25,25,25)){val xText=(story.title+"\n\n"+ex).take(250)+"\n"+story.link;shareToApp("com.twitter.android",xText,"X")},LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(socialIcon("𝕏",Color.rgb(25,25,25),"x"){val xText=(story.title+"\n\n"+ex).take(250)+"\n"+story.link;shareToApp("com.twitter.android",xText,"X")},LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("@",Color.rgb(35,35,35)){shareToApp("com.instagram.barcelona",ex+"\n\n"+story.link,"Threads")},LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(socialIcon("@",Color.rgb(35,35,35),"threads"){shareToApp("com.instagram.barcelona",ex+"\n\n"+story.link,"Threads")},LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("t",Color.rgb(52,70,93)){shareToApp("com.tumblr",ex+"\n\n"+story.link,"Tumblr")},LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(socialIcon("t",Color.rgb(52,70,93),"tumblr"){shareToApp("com.tumblr",ex+"\n\n"+story.link,"Tumblr")},LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("in",Color.rgb(10,102,194)){shareToApp("com.linkedin.android",story.title+"\n\n"+ex+"\n\n"+story.link,"LinkedIn")},LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(socialIcon("in",Color.rgb(10,102,194),"linkedin"){shareToApp("com.linkedin.android",story.title+"\n\n"+ex+"\n\n"+story.link,"LinkedIn")},LinearLayout.LayoutParams(0,dp(46),1f))
   card.addView(socialRow)
   val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
   val copyButton=tv("Copy for Quora",13f,navy,true).apply{gravity=Gravity.CENTER}
