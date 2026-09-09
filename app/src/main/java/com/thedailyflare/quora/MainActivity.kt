@@ -1,7 +1,6 @@
 package com.thedailyflare.quora
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.*
 import android.graphics.Color
 import android.graphics.Typeface
@@ -212,49 +211,43 @@ class MainActivity : Activity() {
  }
 
  private fun shareToApp(packageName:String,text:String,label:String){
-  val base=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,text);setPackage(packageName)}
-  val savedKey="share_component_"+packageName
-  val saved=posted.getString(savedKey,null)
+  // Never fall back to Android's full app chooser. It is confusing and forces
+  // the user to browse unrelated apps every time.
+  val send=Intent(Intent.ACTION_SEND).apply{
+   type="text/plain"
+   putExtra(Intent.EXTRA_TEXT,text)
+   setPackage(packageName)
+  }
 
-  // Reuse the exact share destination chosen previously so switching between
-  // social apps does not send Android back to its "Open with" resolver.
-  if(!saved.isNullOrBlank()){
-   val parts=saved.split("|",limit=2)
-   if(parts.size==2){
-    try{
-     startActivity(Intent(base).setComponent(ComponentName(parts[0],parts[1])))
-     return
-    }catch(e:Exception){
-     posted.edit().remove(savedKey).apply()
-    }
+  val targets=packageManager.queryIntentActivities(send,0)
+   .filter{it.activityInfo.packageName==packageName}
+
+  if(targets.isNotEmpty()){
+   // Launch one explicit activity inside the requested app. This prevents the
+   // system resolver from appearing when the app exposes several share actions.
+   val target=targets.first().activityInfo
+   try{
+    startActivity(Intent(send).setComponent(ComponentName(target.packageName,target.name)))
+    return
+   }catch(e:Exception){
+    // Continue to the clipboard + direct-app fallback below.
    }
   }
 
+  // Some apps do not expose a public ACTION_SEND activity on every Android
+  // version. In that case copy the prepared text and open only that app.
+  (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager)
+   .setPrimaryClip(ClipData.newPlainText(label+" post",text))
   try{
-   val options=packageManager.queryIntentActivities(base,0)
-    .filter{it.activityInfo.packageName==packageName}
-
-   when{
-    options.isEmpty()->throw Exception("App not available")
-    options.size==1->startActivity(base.setComponent(ComponentName(options[0].activityInfo.packageName,options[0].activityInfo.name)))
-    else->{
-     val labels=options.map{it.loadLabel(packageManager).toString()}.toTypedArray()
-     AlertDialog.Builder(this)
-      .setTitle("Choose "+label+" action")
-      .setItems(labels){_,which->
-       val chosen=options[which].activityInfo
-       posted.edit().putString(savedKey,chosen.packageName+"|"+chosen.name).apply()
-       try{startActivity(Intent(base).setComponent(ComponentName(chosen.packageName,chosen.name)))}catch(e:Exception){
-        posted.edit().remove(savedKey).apply()
-       }
-      }
-      .show()
-    }
+   val launch=packageManager.getLaunchIntentForPackage(packageName)
+   if(launch!=null){
+    startActivity(launch)
+    Toast.makeText(this,"Text copied — paste it into "+label,Toast.LENGTH_LONG).show()
+    return
    }
-  }catch(e:Exception){
-   val fallback=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,text)}
-   startActivity(Intent.createChooser(fallback,"Share to "+label))
-  }
+  }catch(e:Exception){}
+
+  Toast.makeText(this,label+" is not available on this device. Text copied.",Toast.LENGTH_LONG).show()
  }
 
  private fun emptySearchCard()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(20),dp(22),dp(20),dp(22));addView(tv("No matching recent story.",18f,ink,true));addView(tv("Try a different keyword or clear your search.",14f,muted).apply{setPadding(0,dp(7),0,0)})}
