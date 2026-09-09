@@ -23,6 +23,7 @@ import org.json.JSONArray
 class MainActivity : Activity() {
  private val feedBase="https://thedailyflare.com/wp-json/wp/v2/posts?per_page=30&_fields=link,title,excerpt,date"
  private val quoraSpace="https://thedailyflare.quora.com/"
+ private val searchConsoleBase="https://search.google.com/search-console/inspect?resource_id=https%3A%2F%2Fthedailyflare.com%2F&id="
  private val posted by lazy { getSharedPreferences("posted", MODE_PRIVATE) }
  private val navy=Color.rgb(23,42,58); private val ink=Color.rgb(32,38,43)
  private val muted=Color.rgb(105,113,120); private val cream=Color.rgb(247,246,243)
@@ -142,12 +143,21 @@ class MainActivity : Activity() {
   val card=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(18),dp(17),dp(18),dp(17))}
   val meta=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
   meta.addView(tv("STORY "+number.toString().padStart(2,'0'),10f,gold,true).apply{letterSpacing=.1f},LinearLayout.LayoutParams(0,dp(22),1f))
-  val done=posted.getBoolean(story.link,false);if(done)meta.addView(tv("POSTED ✓",10f,green,true).apply{background=shape(Color.rgb(228,239,232),12);setPadding(dp(9),dp(5),dp(9),dp(5))});card.addView(meta)
+  val done=posted.getBoolean(story.link,false)
+  if(done)meta.addView(tv("POSTED ✓",10f,green,true).apply{background=shape(Color.rgb(228,239,232),12);setPadding(dp(9),dp(5),dp(9),dp(5))})
+  val titleCopy=tv("⧉",15f,navy,true).apply{gravity=Gravity.CENTER;contentDescription="Copy article title";setPadding(dp(7),0,dp(7),0)}
+  titleCopy.setOnClickListener{
+   (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Article title",story.title))
+   Toast.makeText(this@MainActivity,"Article title copied",Toast.LENGTH_SHORT).show()
+  }
+  meta.addView(titleCopy,LinearLayout.LayoutParams(dp(36),dp(30)))
+  card.addView(meta)
   card.addView(tv(story.title,19f,ink,true).apply{setPadding(0,dp(6),0,dp(14));maxLines=3})
-  // Keep the excerpt hidden for a compact card, but preserve it for every sharing action.
   val ex=(if(story.excerpt.isBlank())"Read the latest report and discover the full details behind this story." else story.excerpt).take(460)
   val quoraPost=ex+"\n\n"+story.link
-  val socialRow=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
+  val socialRows=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
+  val row1=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
+  val row2=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(7),0,0)}
   fun socialIcon(label:String,bg:Int,platform:String,action:()->Unit):TextView{
    val icon=tv(label,15f,Color.WHITE,true).apply{gravity=Gravity.CENTER}
    fun paint(done:Boolean){icon.background=shape(if(done)Color.rgb(175,178,180) else bg,16);icon.alpha=if(done).55f else 1f}
@@ -159,8 +169,11 @@ class MainActivity : Activity() {
    }
    return icon
   }
-  // Quora is the primary workflow: open the Space from its icon.
-  socialRow.addView(socialIcon("Q",Color.rgb(185,43,39),"quora"){
+  fun addSocial(row:LinearLayout,icon:TextView){
+   if(row.childCount>0)row.addView(Space(this).apply{minimumWidth=dp(7)})
+   row.addView(icon,LinearLayout.LayoutParams(0,dp(46),1f))
+  }
+  addSocial(row1,socialIcon("Q",Color.rgb(185,43,39),"quora"){
    val pending=copiedStoryLink ?: posted.getString(copiedKey,null)
    if(pending==story.link&&!posted.getBoolean(story.link,false)){
     posted.edit().putBoolean(story.link,true).apply()
@@ -168,27 +181,33 @@ class MainActivity : Activity() {
     Toast.makeText(this@MainActivity,"Marked as posted",Toast.LENGTH_SHORT).show()
    }
    startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(quoraSpace)))
-  },LinearLayout.LayoutParams(0,dp(46),1f))
-  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("f",Color.rgb(24,119,242),"facebook"){
+  })
+  addSocial(row1,socialIcon("f",Color.rgb(24,119,242),"facebook"){
    (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Facebook post",ex+"\n\n"+story.link))
    Toast.makeText(this@MainActivity,"Facebook text copied — paste it into your post",Toast.LENGTH_LONG).show()
    try{
     val launch=packageManager.getLaunchIntentForPackage("com.facebook.katana")
     if(launch!=null) startActivity(launch) else startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.facebook.com/")))
-   }catch(e:Exception){
-    startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.facebook.com/")))
-   }
-  },LinearLayout.LayoutParams(0,dp(46),1f))
-  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("𝕏",Color.rgb(25,25,25),"x"){val xText=ex+"\n\n"+story.link;shareToApp("com.twitter.android",xText,"X")},LinearLayout.LayoutParams(0,dp(46),1f))
-  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("@",Color.rgb(35,35,35),"threads"){shareToApp("com.instagram.barcelona",ex+"\n\n"+story.link,"Threads")},LinearLayout.LayoutParams(0,dp(46),1f))
-  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("t",Color.rgb(52,70,93),"tumblr"){shareToApp("com.tumblr",ex+"\n\n"+story.link,"Tumblr")},LinearLayout.LayoutParams(0,dp(46),1f))
-  socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-   socialRow.addView(socialIcon("in",Color.rgb(10,102,194),"linkedin"){shareToApp("com.linkedin.android",ex+"\n\n"+story.link,"LinkedIn")},LinearLayout.LayoutParams(0,dp(46),1f))
-  card.addView(socialRow)
+   }catch(e:Exception){startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.facebook.com/")))}
+  })
+  addSocial(row1,socialIcon("𝕏",Color.rgb(25,25,25),"x"){
+   shareToApp("com.twitter.android",ex+"\n\n"+story.link,"X")
+  })
+  addSocial(row1,socialIcon("@",Color.rgb(35,35,35),"threads"){
+   shareToApp("com.instagram.barcelona",ex+"\n\n"+story.link,"Threads")
+  })
+  addSocial(row2,socialIcon("t",Color.rgb(52,70,93),"tumblr"){
+   shareToApp("com.tumblr",ex+"\n\n"+story.link,"Tumblr")
+  })
+  addSocial(row2,socialIcon("in",Color.rgb(10,102,194),"linkedin"){
+   shareToApp("com.linkedin.android",ex+"\n\n"+story.link,"LinkedIn")
+  })
+  addSocial(row2,socialIcon("G",Color.rgb(66,133,244),"search_console"){
+   copyArticleUrlAndOpenSearchConsole(story)
+  })
+  socialRows.addView(row1)
+  socialRows.addView(row2)
+  card.addView(socialRows)
   val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
   val copyButton=tv("Copy for Quora",13f,navy,true).apply{gravity=Gravity.CENTER}
   val markButton=tv(if(done)"Posted ✓" else "Mark as posted",13f,if(done)green else muted,true).apply{gravity=Gravity.CENTER}
@@ -210,34 +229,31 @@ class MainActivity : Activity() {
   list.addView(card);list.addView(Space(this).apply{minimumHeight=dp(12)})
  }
 
- private fun shareViaTarget(packageName:String,text:String,label:String){
-  val send=Intent(Intent.ACTION_SEND).apply{
-   type="text/plain"
-   putExtra(Intent.EXTRA_TEXT,text)
+ private fun copyArticleUrlAndOpenSearchConsole(story:Story){
+  (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Article URL",story.link))
+  val inspectionUrl=searchConsoleBase+Uri.encode(story.link)
+  try{
+   startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(inspectionUrl)))
+  }catch(e:Exception){
+   startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://search.google.com/search-console/")))
   }
+ }
+
+ private fun shareViaTarget(packageName:String,text:String,label:String){
+  val send=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,text)}
   val matches=packageManager.queryIntentActivities(send,0)
   val target=matches.firstOrNull{it.activityInfo.packageName==packageName}
   if(target!=null){
    send.component=android.content.ComponentName(target.activityInfo.packageName,target.activityInfo.name)
    try{startActivity(send)}catch(e:Exception){Toast.makeText(this,label+" is not available on this device.",Toast.LENGTH_LONG).show()}
-  }else{
-   Toast.makeText(this,label+" is not available on this device.",Toast.LENGTH_LONG).show()
-  }
+  }else Toast.makeText(this,label+" is not available on this device.",Toast.LENGTH_LONG).show()
  }
 
  private fun shareToApp(packageName:String,text:String,label:String){
   // Original targeted Android share: restrict the intent to the selected app,
   // but let that app decide whether to show Post, Message, Story, etc.
-  val send=Intent(Intent.ACTION_SEND).apply{
-   type="text/plain"
-   putExtra(Intent.EXTRA_TEXT,text)
-   setPackage(packageName)
-  }
-  try{
-   startActivity(send)
-  }catch(e:Exception){
-   Toast.makeText(this,label+" is not available on this device.",Toast.LENGTH_LONG).show()
-  }
+  val send=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,text);setPackage(packageName)}
+  try{startActivity(send)}catch(e:Exception){Toast.makeText(this,label+" is not available on this device.",Toast.LENGTH_LONG).show()}
  }
 
  private fun emptySearchCard()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(20),dp(22),dp(20),dp(22));addView(tv("No matching recent story.",18f,ink,true));addView(tv("Try a different keyword or clear your search.",14f,muted).apply{setPadding(0,dp(7),0,0)})}
