@@ -181,13 +181,13 @@ class MainActivity : Activity() {
    }
   },LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("𝕏",Color.rgb(25,25,25),"x"){val xText=(story.title+"\n\n"+ex).take(250)+"\n"+story.link;shareToApp("com.twitter.android",xText,"X")},LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(socialIcon("𝕏",Color.rgb(25,25,25),"x"){val xText=(story.title+"\n\n"+ex).take(250)+"\n"+story.link;shareViaTarget("com.twitter.android",xText,"X")},LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("@",Color.rgb(35,35,35),"threads"){shareToApp("com.instagram.barcelona",ex+"\n\n"+story.link,"Threads")},LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(socialIcon("@",Color.rgb(35,35,35),"threads"){shareViaTarget("com.instagram.barcelona",story.title+"\n\n"+ex+"\n\n"+story.link,"Threads")},LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
   socialRow.addView(socialIcon("t",Color.rgb(52,70,93),"tumblr"){shareToApp("com.tumblr",ex+"\n\n"+story.link,"Tumblr")},LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-   socialRow.addView(socialIcon("in",Color.rgb(10,102,194),"linkedin"){shareToApp("com.linkedin.android",story.title+"\n\n"+ex+"\n\n"+story.link,"LinkedIn")},LinearLayout.LayoutParams(0,dp(46),1f))
+   socialRow.addView(socialIcon("in",Color.rgb(10,102,194),"linkedin"){shareViaTarget("com.linkedin.android",story.title+"\n\n"+ex+"\n\n"+story.link,"LinkedIn")},LinearLayout.LayoutParams(0,dp(46),1f))
   card.addView(socialRow)
   val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
   val copyButton=tv("Copy for Quora",13f,navy,true).apply{gravity=Gravity.CENTER}
@@ -208,6 +208,21 @@ class MainActivity : Activity() {
   actions.addView(tv("│",18f,Color.rgb(226,226,223)).apply{gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(1),dp(42)))
   actions.addView(markButton,LinearLayout.LayoutParams(0,dp(42),1f));card.addView(actions)
   list.addView(card);list.addView(Space(this).apply{minimumHeight=dp(12)})
+ }
+
+ private fun shareViaTarget(packageName:String,text:String,label:String){
+  val send=Intent(Intent.ACTION_SEND).apply{
+   type="text/plain"
+   putExtra(Intent.EXTRA_TEXT,text)
+  }
+  val matches=packageManager.queryIntentActivities(send,0)
+  val target=matches.firstOrNull{it.activityInfo.packageName==packageName}
+  if(target!=null){
+   send.component=android.content.ComponentName(target.activityInfo.packageName,target.activityInfo.name)
+   try{startActivity(send)}catch(e:Exception){Toast.makeText(this,label+" is not available on this device.",Toast.LENGTH_LONG).show()}
+  }else{
+   Toast.makeText(this,label+" is not available on this device.",Toast.LENGTH_LONG).show()
+  }
  }
 
  private fun shareToApp(packageName:String,text:String,label:String){
