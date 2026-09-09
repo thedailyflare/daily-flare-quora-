@@ -187,7 +187,7 @@ class MainActivity : Activity() {
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
   socialRow.addView(socialIcon("t",Color.rgb(52,70,93),"tumblr"){shareToApp("com.tumblr",ex+"\n\n"+story.link,"Tumblr")},LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("in",Color.rgb(10,102,194),"linkedin"){\n   val postText=story.title+"\\n\\n"+ex+"\\n\\n"+story.link\n   try{\n    startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.linkedin.com/feed/?shareActive=true")).setPackage("com.linkedin.android"))\n   }catch(e:Exception){\n    shareToApp("com.linkedin.android",postText,"LinkedIn")\n   }\n  },LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(socialIcon("in",Color.rgb(10,102,194),"linkedin"){\n   val postText=story.title+"\n\n"+ex+"\n\n"+story.link\n   try{\n    startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.linkedin.com/feed/?shareActive=true")).setPackage("com.linkedin.android"))\n   }catch(e:Exception){\n    shareToApp("com.linkedin.android",postText,"LinkedIn")\n   }\n  },LinearLayout.LayoutParams(0,dp(46),1f))
   card.addView(socialRow)
   val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
   val copyButton=tv("Copy for Quora",13f,navy,true).apply{gravity=Gravity.CENTER}
