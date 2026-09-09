@@ -181,7 +181,7 @@ class MainActivity : Activity() {
    }
   },LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
-  socialRow.addView(socialIcon("𝕏",Color.rgb(25,25,25),"x"){val xText=(story.title+"\n\n"+ex).take(250)+"\n"+story.link;shareToApp("com.twitter.android",xText,"X")},LinearLayout.LayoutParams(0,dp(46),1f))
+  socialRow.addView(socialIcon("𝕏",Color.rgb(25,25,25),"x"){val xText=ex+"\n\n"+story.link;shareToApp("com.twitter.android",xText,"X")},LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
   socialRow.addView(socialIcon("@",Color.rgb(35,35,35),"threads"){shareToApp("com.instagram.barcelona",ex+"\n\n"+story.link,"Threads")},LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
