@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Apply Instagram-only patch
+        run: python3 scripts/patch_instagram_choice.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -23,6 +25,13 @@ jobs:
       - run: gradle --no-daemon :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: Daily-Flare-Quora-APK
+          name: Daily-Flare-Quora-Instagram-Choice-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+      - name: Commit Instagram-only app change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/thedailyflare/quora/MainActivity.kt
+          git commit -m 'Add Instagram post or message choice'
+          git push
