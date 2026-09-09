@@ -172,8 +172,13 @@ class MainActivity : Activity() {
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
   socialRow.addView(socialIcon("f",Color.rgb(24,119,242),"facebook"){
    (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Facebook post",ex+"\n\n"+story.link))
-   Toast.makeText(this@MainActivity,"Facebook post copied",Toast.LENGTH_SHORT).show()
-   shareToApp("com.facebook.katana",story.link,"Facebook")
+   Toast.makeText(this@MainActivity,"Facebook text copied — paste it into your post",Toast.LENGTH_LONG).show()
+   try{
+    val launch=packageManager.getLaunchIntentForPackage("com.facebook.katana")
+    if(launch!=null) startActivity(launch) else startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.facebook.com/")))
+   }catch(e:Exception){
+    startActivity(Intent(Intent.ACTION_VIEW,Uri.parse("https://www.facebook.com/")))
+   }
   },LinearLayout.LayoutParams(0,dp(46),1f))
   socialRow.addView(Space(this).apply{minimumWidth=dp(7)})
   socialRow.addView(socialIcon("𝕏",Color.rgb(25,25,25),"x"){val xText=(story.title+"\n\n"+ex).take(250)+"\n"+story.link;shareToApp("com.twitter.android",xText,"X")},LinearLayout.LayoutParams(0,dp(46),1f))
