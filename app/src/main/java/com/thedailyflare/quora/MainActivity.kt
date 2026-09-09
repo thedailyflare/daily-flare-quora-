@@ -31,9 +31,13 @@ class MainActivity : Activity() {
  private lateinit var list:LinearLayout; private lateinit var status:TextView
  private lateinit var swipeRefresh:SwipeRefreshLayout
  private lateinit var searchBox:EditText
+ private lateinit var loadMoreButton:TextView
  private var allStories:List<Story> = emptyList()
  private var copiedStoryLink:String? = null
  private var refreshPostedOnResume=false
+ private var currentPage=1
+ private var totalPages=1
+ private var loadingMore=false
  private val copiedKey="copied_story_link"
  private val instagramCtas=listOf(
   "❤️ Like this one if you want more updates like it.",
@@ -86,24 +90,28 @@ class MainActivity : Activity() {
   body.addView(searchBox,LinearLayout.LayoutParams(-1,dp(52)).apply{bottomMargin=dp(12)})
   val scroll=ScrollView(this);list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};scroll.addView(list)
   swipeRefresh=SwipeRefreshLayout(this).apply{setOnRefreshListener{loadFeed()};addView(scroll)}
-  body.addView(swipeRefresh,LinearLayout.LayoutParams(-1,0,1f));root.addView(body,LinearLayout.LayoutParams(-1,0,1f))
+  body.addView(swipeRefresh,LinearLayout.LayoutParams(-1,0,1f))
+  loadMoreButton=tv("Load 10 more stories",14f,navy,true).apply{gravity=Gravity.CENTER;background=shape(Color.rgb(239,242,244),14,1,Color.rgb(220,224,227));setPadding(dp(12),dp(11),dp(12),dp(11));visibility=View.GONE;setOnClickListener{if(!loadingMore&&currentPage<totalPages)loadFeed(currentPage+1,true)}}
+  body.addView(loadMoreButton,LinearLayout.LayoutParams(-1,dp(48)).apply{topMargin=dp(8);bottomMargin=dp(8)})
+  root.addView(body,LinearLayout.LayoutParams(-1,0,1f))
   root.addView(tv("THE DAILY FLARE  •  NEWS THAT MATTERS",10f,muted,true).apply{gravity=Gravity.CENTER;background=shape(Color.WHITE);setPadding(dp(18),dp(14),dp(18),dp(16));letterSpacing=.08f})
   setContentView(root)
  }
 
- private fun loadFeed(){
-  if(::swipeRefresh.isInitialized) swipeRefresh.isRefreshing=true
-  status.text="Refreshing recent stories…";list.removeAllViews()
+ private fun loadFeed(page:Int=1,append:Boolean=false){
+  if(append){if(loadingMore)return;loadingMore=true;loadMoreButton.text="Loading…";loadMoreButton.isEnabled=false}
+  else{currentPage=1;totalPages=1;if(::swipeRefresh.isInitialized)swipeRefresh.isRefreshing=true;status.text="Refreshing recent stories…";list.removeAllViews();loadMoreButton.visibility=View.GONE}
   Thread{
    try{
     val calendar=Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply{add(Calendar.DAY_OF_YEAR,-3)}
     val formatter=SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US).apply{timeZone=TimeZone.getTimeZone("UTC")}
     val after=formatter.format(calendar.time)
-    val feed=feedBase+"&after="+java.net.URLEncoder.encode(after,"UTF-8")
+    val feed=feedBase+"&after="+java.net.URLEncoder.encode(after,"UTF-8")+"&page="+page
     val connection=URL(feed).openConnection() as HttpURLConnection
     connection.connectTimeout=15000;connection.readTimeout=15000
     connection.setRequestProperty("User-Agent","DailyFlareQuora/1.0");connection.connect()
     if(connection.responseCode !in 200..299) throw Exception("HTTP "+connection.responseCode)
+    val pagesHeader=connection.getHeaderField("X-WP-TotalPages")?.toIntOrNull() ?: page
     val json=connection.inputStream.bufferedReader().use{it.readText()}
     val posts=JSONArray(json);val stories=mutableListOf<Story>()
     for(i in 0 until posts.length()){
@@ -115,8 +123,24 @@ class MainActivity : Activity() {
      if(title.isNotBlank()&&link.isNotBlank())stories.add(Story(title,link,excerpt,tags))
     }
     connection.disconnect()
-    runOnUiThread{allStories=stories;filterStories(searchBox.text?.toString().orEmpty());if(::swipeRefresh.isInitialized)swipeRefresh.isRefreshing=false}
-   }catch(e:Exception){runOnUiThread{status.text="Unable to load stories";list.addView(errorCard());if(::swipeRefresh.isInitialized)swipeRefresh.isRefreshing=false}}
+    runOnUiThread{
+     currentPage=page;totalPages=pagesHeader
+     allStories=if(append)allStories+stories else stories
+     filterStories(searchBox.text?.toString().orEmpty())
+     if(::swipeRefresh.isInitialized)swipeRefresh.isRefreshing=false
+     loadingMore=false
+     loadMoreButton.isEnabled=true
+     loadMoreButton.text="Load 10 more stories"
+     loadMoreButton.visibility=if(currentPage<totalPages)View.VISIBLE else View.GONE
+    }
+   }catch(e:Exception){runOnUiThread{
+    if(::swipeRefresh.isInitialized)swipeRefresh.isRefreshing=false
+    loadingMore=false
+    loadMoreButton.isEnabled=true
+    loadMoreButton.text="Load 10 more stories"
+    if(append){Toast.makeText(this@MainActivity,"Couldn't load more stories",Toast.LENGTH_LONG).show();loadMoreButton.visibility=View.VISIBLE}
+    else{status.text="Unable to load stories";list.addView(errorCard())}
+   }}
   }.start()
  }
 
