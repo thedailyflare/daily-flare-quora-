@@ -114,7 +114,8 @@ class MainActivity : Activity() {
     connection.connectTimeout=15000;connection.readTimeout=15000
     connection.setRequestProperty("User-Agent","DailyFlareQuora/1.0");connection.connect()
     if(connection.responseCode !in 200..299) throw Exception("HTTP "+connection.responseCode)
-    val pagesHeader=connection.getHeaderField("X-WP-TotalPages")?.toIntOrNull() ?: page
+    val totalHeader=connection.getHeaderField("X-WP-Total")?.toIntOrNull()
+    val pagesHeader=connection.getHeaderField("X-WP-TotalPages")?.toIntOrNull()
     val json=connection.inputStream.bufferedReader().use{it.readText()}
     val posts=JSONArray(json);val stories=mutableListOf<Story>()
     for(i in 0 until posts.length()){
@@ -126,16 +127,16 @@ class MainActivity : Activity() {
      val date=post.optString("date_gmt").ifBlank{post.optString("date")}
      if(title.isNotBlank()&&link.isNotBlank())stories.add(Story(title,link,excerpt,tags,date))
     }
+    val resolvedPages=pagesHeader ?: totalHeader?.let{((it+9)/10).coerceAtLeast(1)} ?: (page+if(stories.size>=10)1 else 0)
     connection.disconnect()
     runOnUiThread{
-     currentPage=page;totalPages=pagesHeader
+     currentPage=page;totalPages=resolvedPages
      allStories=if(append)allStories+stories else stories
      filterStories(searchBox.text?.toString().orEmpty())
      if(::swipeRefresh.isInitialized)swipeRefresh.isRefreshing=false
      loadingMore=false
      loadMoreButton.isEnabled=true
      loadMoreButton.text="Load 10 more stories"
-     loadMoreButton.visibility=if(currentPage<totalPages)View.VISIBLE else View.GONE
      if(append)storyScroll.post{storyScroll.smoothScrollTo(0,0)}
     }
    }catch(e:Exception){runOnUiThread{
@@ -172,8 +173,8 @@ class MainActivity : Activity() {
   filtered.forEachIndexed{i,s->addCard(s,i+1)}
   if(filtered.isEmpty()&&allStories.isNotEmpty())list.addView(emptySearchCard())
   if(q.isBlank()&&currentPage<totalPages&&allStories.isNotEmpty()){
-   list.addView(loadMoreButton,LinearLayout.LayoutParams(-1,dp(48)).apply{topMargin=dp(4);bottomMargin=dp(12);leftMargin=0;rightMargin=0})
    loadMoreButton.visibility=View.VISIBLE
+   list.addView(loadMoreButton,LinearLayout.LayoutParams(-1,dp(48)).apply{topMargin=dp(4);bottomMargin=dp(12)})
   }else loadMoreButton.visibility=View.GONE
  }
 
