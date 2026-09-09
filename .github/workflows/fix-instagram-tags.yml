@@ -1,0 +1,37 @@
+name: Fix Instagram Tags
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message != 'Fix Instagram tag embedding'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix WordPress embedded terms request
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/thedailyflare/quora/MainActivity.kt')
+          s = p.read_text()
+          old = '_fields=link,title,excerpt,date,tags,_embedded'
+          new = '_fields=link,title,excerpt,date,tags,_links,_embedded'
+          if old not in s:
+              raise SystemExit('Expected feed fields not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Remove temporary fixer
+        run: rm .github/workflows/fix-instagram-tags.yml
+      - name: Commit fix
+        run: |
+          git config user.name 'The Daily Flare'
+          git config user.email '121073238+thedailyflare@users.noreply.github.com'
+          git add app/src/main/java/com/thedailyflare/quora/MainActivity.kt .github/workflows/fix-instagram-tags.yml
+          git commit -m 'Fix Instagram tag embedding'
+          git push
