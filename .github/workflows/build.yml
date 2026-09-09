@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
 
 # Standard Android APK build
+# Trigger build for latest pagination implementation.
 jobs:
   build:
     name: Build Debug APK
