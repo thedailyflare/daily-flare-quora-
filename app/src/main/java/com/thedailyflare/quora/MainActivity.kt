@@ -211,9 +211,45 @@ class MainActivity : Activity() {
  }
 
  private fun shareToApp(packageName:String,text:String,label:String){
-  val intent=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,text);setPackage(packageName)}
+  val base=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,text);setPackage(packageName)}
+  val savedKey="share_component_"+packageName
+  val saved=posted.getString(savedKey,null)
+
+  // Reuse the exact share destination chosen previously so switching between
+  // social apps does not send Android back to its "Open with" resolver.
+  if(!saved.isNullOrBlank()){
+   val parts=saved.split("|",limit=2)
+   if(parts.size==2){
+    try{
+     startActivity(Intent(base).setComponent(ComponentName(parts[0],parts[1])))
+     return
+    }catch(e:Exception){
+     posted.edit().remove(savedKey).apply()
+    }
+   }
+  }
+
   try{
-   startActivity(intent)
+   val options=packageManager.queryIntentActivities(base,0)
+    .filter{it.activityInfo.packageName==packageName}
+
+   when{
+    options.isEmpty()->throw Exception("App not available")
+    options.size==1->startActivity(base.setComponent(ComponentName(options[0].activityInfo.packageName,options[0].activityInfo.name)))
+    else->{
+     val labels=options.map{it.loadLabel(packageManager).toString()}.toTypedArray()
+     AlertDialog.Builder(this)
+      .setTitle("Choose "+label+" action")
+      .setItems(labels){_,which->
+       val chosen=options[which].activityInfo
+       posted.edit().putString(savedKey,chosen.packageName+"|"+chosen.name).apply()
+       try{startActivity(Intent(base).setComponent(ComponentName(chosen.packageName,chosen.name)))}catch(e:Exception){
+        posted.edit().remove(savedKey).apply()
+       }
+      }
+      .show()
+    }
+   }
   }catch(e:Exception){
    val fallback=Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,text)}
    startActivity(Intent.createChooser(fallback,"Share to "+label))
