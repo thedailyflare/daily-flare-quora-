@@ -11,6 +11,7 @@ import android.view.Gravity
 import android.text.Editable
 import android.text.TextWatcher
 import android.widget.*
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -27,6 +28,7 @@ class MainActivity : Activity() {
  private val muted=Color.rgb(105,113,120); private val cream=Color.rgb(247,246,243)
  private val gold=Color.rgb(201,168,106); private val green=Color.rgb(71,117,91)
  private lateinit var list:LinearLayout; private lateinit var status:TextView
+ private lateinit var swipeRefresh:SwipeRefreshLayout
  private lateinit var searchBox:EditText
  private var allStories:List<Story> = emptyList()
  private var copiedStoryLink:String? = null
@@ -55,22 +57,26 @@ class MainActivity : Activity() {
   val head=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(22),dp(22),dp(22),dp(18));background=shape(navy)}
   val top=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
   top.addView(tv("THE DAILY FLARE",21f,Color.WHITE,true).apply{letterSpacing=.08f},LinearLayout.LayoutParams(0,dp(48),1f))
-  top.addView(tv("↻",28f,Color.WHITE,true).apply{gravity=Gravity.CENTER;background=shape(Color.argb(30,255,255,255),18);setOnClickListener{loadFeed()}},LinearLayout.LayoutParams(dp(52),dp(48)))
   head.addView(top);head.addView(tv("SOCIAL SHARING DESK",11f,gold,true).apply{letterSpacing=.12f})
   head.addView(tv("Turn today's stories into ready-to-share posts.",15f,Color.rgb(220,226,230)).apply{setPadding(0,dp(5),0,0)})
   root.addView(head)
   val body=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(18),dp(18),dp(18),dp(8))}
   val row=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL};status=tv("Loading latest stories…",18f,ink,true)
   row.addView(status,LinearLayout.LayoutParams(0,dp(40),1f));row.addView(tv("LIVE",10f,green,true).apply{gravity=Gravity.CENTER;background=shape(Color.rgb(228,239,232),14);setPadding(dp(10),dp(6),dp(10),dp(6))});body.addView(row)
-  body.addView(tv("Fresh stories from the last 3 days. Search anytime to find a recent article.",13f,muted).apply{setPadding(0,0,0,dp(12))})
   searchBox=EditText(this).apply{hint="Search recent stories";textSize=15f;setTextColor(ink);setHintTextColor(muted);setSingleLine(true);setPadding(dp(16),0,dp(16),0);background=shape(Color.WHITE,14,1,Color.rgb(225,225,222));addTextChangedListener(object:TextWatcher{override fun beforeTextChanged(s:CharSequence?,st:Int,count:Int,after:Int){};override fun onTextChanged(s:CharSequence?,st:Int,before:Int,count:Int){filterStories(s?.toString().orEmpty())};override fun afterTextChanged(s:Editable?){}})}
   body.addView(searchBox,LinearLayout.LayoutParams(-1,dp(52)).apply{bottomMargin=dp(12)})
-  val scroll=ScrollView(this);list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};scroll.addView(list);body.addView(scroll,LinearLayout.LayoutParams(-1,0,1f));root.addView(body,LinearLayout.LayoutParams(-1,0,1f))
+  val scroll=ScrollView(this);list=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};scroll.addView(list)
+  swipeRefresh=SwipeRefreshLayout(this).apply{
+   setOnRefreshListener{loadFeed()}
+   addView(scroll)
+  }
+  body.addView(swipeRefresh,LinearLayout.LayoutParams(-1,0,1f));root.addView(body,LinearLayout.LayoutParams(-1,0,1f))
   root.addView(tv("THE DAILY FLARE  •  NEWS THAT MATTERS",10f,muted,true).apply{gravity=Gravity.CENTER;background=shape(Color.WHITE);setPadding(dp(18),dp(14),dp(18),dp(16));letterSpacing=.08f})
   setContentView(root)
  }
 
  private fun loadFeed(){
+  if(::swipeRefresh.isInitialized) swipeRefresh.isRefreshing=true
   status.text="Refreshing recent stories…";list.removeAllViews()
   Thread{
    try{
@@ -98,11 +104,13 @@ class MainActivity : Activity() {
     runOnUiThread{
      allStories=stories
      filterStories(searchBox.text?.toString().orEmpty())
+     if(::swipeRefresh.isInitialized) swipeRefresh.isRefreshing=false
     }
    }catch(e:Exception){
     runOnUiThread{
      status.text="Unable to load stories"
      list.addView(errorCard())
+     if(::swipeRefresh.isInitialized) swipeRefresh.isRefreshing=false
     }
    }
   }.start()
@@ -198,6 +206,6 @@ class MainActivity : Activity() {
 
  private fun emptySearchCard()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(20),dp(22),dp(20),dp(22));addView(tv("No matching recent story.",18f,ink,true));addView(tv("Try a different keyword or clear your search.",14f,muted).apply{setPadding(0,dp(7),0,0)})}
 
- private fun errorCard()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(20),dp(22),dp(20),dp(22));addView(tv("We couldn't load the latest stories.",18f,ink,true));addView(tv("Please check your connection and tap refresh to try again.",14f,muted).apply{setPadding(0,dp(7),0,0)})}
+ private fun errorCard()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;background=shape(Color.WHITE,20,1,Color.rgb(229,229,226));setPadding(dp(20),dp(22),dp(20),dp(22));addView(tv("We couldn't load the latest stories.",18f,ink,true));addView(tv("Please check your connection and pull down to refresh.",14f,muted).apply{setPadding(0,dp(7),0,0)})}
  data class Story(val title:String,val link:String,val excerpt:String)
 }
