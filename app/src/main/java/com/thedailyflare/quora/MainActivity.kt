@@ -21,7 +21,7 @@ import java.net.URL
 import org.json.JSONArray
 
 class MainActivity : Activity() {
- private val feedBase="https://thedailyflare.com/wp-json/wp/v2/posts?per_page=30&_embed=1&_fields=link,title,excerpt,date,tags,_embedded"
+ private val feedBase="https://thedailyflare.com/wp-json/wp/v2/posts?per_page=30&_embed=1&_fields=link,title,excerpt,date,tags,_links,_embedded"
  private val quoraSpace="https://thedailyflare.quora.com/"
  private val searchConsoleUrl="https://search.google.com/search-console?utm_source=about-page&resource_id=sc-domain:thedailyflare.com"
  private val posted by lazy { getSharedPreferences("posted", MODE_PRIVATE) }
