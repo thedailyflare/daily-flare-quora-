@@ -266,9 +266,10 @@ class MainActivity : Activity() {
   }
   fun addSocial(row:LinearLayout,icon:TextView){if(row.childCount>0)row.addView(Space(this).apply{minimumWidth=dp(7)});row.addView(icon,LinearLayout.LayoutParams(0,dp(46),1f))}
   addSocial(row1,socialIcon("Q",Color.rgb(185,43,39),"quora"){
-   val pending=copiedStoryLink ?: posted.getString(copiedKey,null)
-   if(pending==story.link&&!posted.getBoolean(story.link,false)){posted.edit().putBoolean(story.link,true).apply();refreshPostedOnResume=true;Toast.makeText(this@MainActivity,"Marked as posted",Toast.LENGTH_SHORT).show()}
-   startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(quoraSpace)))
+   (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",quoraPost))
+   copiedStoryLink=story.link
+   posted.edit().putString(copiedKey,story.link).apply()
+   Toast.makeText(this@MainActivity,"Quora post copied",Toast.LENGTH_SHORT).show()
   })
   addSocial(row1,socialIcon("f",Color.rgb(24,119,242),"facebook"){
    (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Facebook post",ex+"\n\n"+story.link))
@@ -282,14 +283,6 @@ class MainActivity : Activity() {
   addSocial(row2,socialIcon("G",Color.rgb(66,133,244),"search_console"){copyArticleUrlAndOpenSearchConsole(story)})
   addSocial(row2,socialIcon("◎",Color.rgb(193,53,132),"instagram"){copyInstagramAndOpen(story,ex)})
   socialRows.addView(row1);socialRows.addView(row2);card.addView(socialRows)
-  val actions=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL;setPadding(0,dp(10),0,0)}
-  val copyButton=tv("Copy for Quora",13f,navy,true).apply{gravity=Gravity.CENTER}
-  val markButton=tv(if(done)"Posted ✓" else "Mark as posted",13f,if(done)green else muted,true).apply{gravity=Gravity.CENTER}
-  copyButton.setOnClickListener{
-   (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Quora post",quoraPost));copiedStoryLink=story.link;posted.edit().putString(copiedKey,story.link).apply();Toast.makeText(this@MainActivity,"Copied — now tap Q to open Quora",Toast.LENGTH_SHORT).show()
-  }
-  markButton.setOnClickListener{posted.edit().putBoolean(story.link,true).apply();markButton.text="Posted ✓";markButton.setTextColor(green);Toast.makeText(this@MainActivity,"Marked as posted",Toast.LENGTH_SHORT).show()}
-  actions.addView(copyButton,LinearLayout.LayoutParams(0,dp(42),1f));actions.addView(tv("│",18f,Color.rgb(226,226,223)).apply{gravity=Gravity.CENTER},LinearLayout.LayoutParams(dp(1),dp(42)));actions.addView(markButton,LinearLayout.LayoutParams(0,dp(42),1f));card.addView(actions)
   list.addView(card);list.addView(Space(this).apply{minimumHeight=dp(12)})
  }
 
