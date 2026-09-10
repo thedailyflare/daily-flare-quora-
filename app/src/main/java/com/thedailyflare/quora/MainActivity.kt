@@ -23,7 +23,7 @@ import org.json.JSONArray
 
 class MainActivity : Activity() {
  private val feedBase="https://thedailyflare.com/wp-json/wp/v2/posts?per_page=10&_embed=1&_fields=link,title,excerpt,date,date_gmt,tags,_links,_embedded"
- private val quoraSpace="https://thedailyflare.quora.com/"
+ private val quoraSpace="https://thedailyflare.quora.com/?ch=10&oid=8196927&share=396067ef&srid=hLEcM&target_type=tribe"
  private val searchConsoleUrl="https://search.google.com/search-console?utm_source=about-page&resource_id=sc-domain:thedailyflare.com"
  private val posted by lazy { getSharedPreferences("posted", MODE_PRIVATE) }
  private val navy=Color.rgb(23,42,58); private val ink=Color.rgb(32,38,43)
@@ -270,6 +270,7 @@ class MainActivity : Activity() {
    copiedStoryLink=story.link
    posted.edit().putString(copiedKey,story.link).apply()
    Toast.makeText(this@MainActivity,"Quora post copied",Toast.LENGTH_SHORT).show()
+   try{startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(quoraSpace)))}catch(e:Exception){Toast.makeText(this@MainActivity,"Couldn't open Quora Space",Toast.LENGTH_SHORT).show()}
   })
   addSocial(row1,socialIcon("f",Color.rgb(24,119,242),"facebook"){
    (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Facebook post",ex+"\n\n"+story.link))
